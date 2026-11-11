@@ -7,10 +7,16 @@ import { colors, font, radius, spacing } from '../theme';
 type Props = {
   onSend: (text: string) => Promise<void>;
   onSendLocation: () => Promise<void>;
+  onTextChange?: (text: string) => void; // báo "đang soạn tin"
+  onPickImage?: () => void; // nút 📷: chụp ảnh hoặc chọn từ thư viện
 };
 
-export default function ChatInput({ onSend, onSendLocation }: Props) {
-  const [text, setText] = useState('');
+export default function ChatInput({ onSend, onSendLocation, onTextChange, onPickImage }: Props) {
+  const [text, setTextState] = useState('');
+  const setText = (value: string) => {
+    setTextState(value);
+    onTextChange?.(value);
+  };
   const [sending, setSending] = useState(false);
   const [locating, setLocating] = useState(false);
   const canSend = text.trim().length > 0 && !sending;
@@ -60,6 +66,15 @@ export default function ChatInput({ onSend, onSendLocation }: Props) {
           <Text style={styles.pinIcon}>📍</Text>
         )}
       </PressableScale>
+      {onPickImage && (
+        <PressableScale
+          style={styles.cameraBtn}
+          onPress={onPickImage}
+          scaleTo={0.88}
+          accessibilityLabel="Gửi ảnh">
+          <Text style={styles.pinIcon}>📷</Text>
+        </PressableScale>
+      )}
       <TextInput
         style={styles.input}
         value={text}
@@ -108,6 +123,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pinIcon: { fontSize: 22 },
+  cameraBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   input: {
     flex: 1,
     minHeight: 48,

@@ -1,16 +1,45 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Linking, StyleSheet, Text, View } from 'react-native';
+import { Animated, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import PressableScale from './PressableScale';
-import { Message } from '../services/chatService';
+import { ImageMessage } from './ImageBubbles';
+import { Message, RECALLED_TEXT, summarizeReactions } from '../services/chatService';
 import { formatMessageTime } from '../utils/formatTime';
 import { getMapsUrl } from '../utils/mapsUrl';
 import { easeOut, useReduceMotion } from '../hooks/useReduceMotion';
 import { colors, font, radius, spacing } from '../theme';
 
-type Props = { message: Message; mine: boolean; animateIn?: boolean };
+type Props = {
+  message: Message;
+  mine: boolean;
+  animateIn?: boolean;
+  senderName?: string; // chat nhóm: tên người gửi phía trên bong bóng
+  footer?: React.ReactNode; // "Đã gửi" / "Đã xem" dưới tin cuối của mình
+  myUid?: string;
+  onLongPress?: () => void; // mở menu Sao chép / Thu hồi / cảm xúc
+  onOpenImage?: (url: string) => void; // nhấn ảnh để xem toàn màn hình
+  replyName?: string; // tên người gửi tin được trích dẫn
+  replyPreview?: string; // nội dung trích dẫn (đã tính tới trường hợp tin gốc bị thu hồi)
+  onPressReply?: () => void; // cuộn tới tin gốc
+  highlighted?: boolean; // vừa nhảy tới từ trích dẫn / tìm kiếm
+};
 
-export default function MessageBubble({ message, mine, animateIn }: Props) {
+const LONG_PRESS_MS = 300;
+
+export default function MessageBubble({
+  message,
+  mine,
+  animateIn,
+  senderName,
+  footer,
+  myUid = '',
+  onLongPress,
+  onOpenImage,
+  replyName,
+  replyPreview,
+  onPressReply,
+  highlighted,
+}: Props) {
   const time = formatMessageTime(message.createdAt);
   const reduce = useReduceMotion();
   const enter = useRef(new Animated.Value(animateIn ? 0 : 1)).current;
@@ -27,6 +56,8 @@ export default function MessageBubble({ message, mine, animateIn }: Props) {
     }
   }, [animateIn, enter, reduce]);
 
+  const reactions = summarizeReactions(message.reactions, myUid);
+
   const motion = {
     opacity: enter,
     transform: reduce
@@ -38,15 +69,66 @@ export default function MessageBubble({ message, mine, animateIn }: Props) {
         ],
   };
 
-  const row = [styles.row, mine ? styles.right : styles.left];
+
+  if (message.type === 'system') {
+    return (
+      <View style={styles.systemRow}>
+        <Text style={styles.systemText}>{message.text}</Text>
+      </View>
+    );
+  }
+
+  const withMeta = (bubble: React.ReactNode) => (
+    <Animated.View
+      style={[styles.wrap, mine ? styles.wrapRight : styles.wrapLeft, highlighted && styles.highlight, motion]}>
+      {senderName ? <Text style={styles.sender}>{senderName}</Text> : null}
+      <View style={[styles.rowInner, mine ? styles.right : styles.left]}>{bubble}</View>
+      {reactions.length > 0 && (
+        <View style={[styles.reactionRow, mine ? styles.right : styles.left]}>
+          {reactions.map(r => (
+            <View key={r.emoji} style={[styles.reactionChip, r.mine && styles.reactionMine]}>
+              <Text style={styles.reactionEmoji}>{r.emoji}</Text>
+              {r.count > 1 && <Text style={styles.reactionCount}>{r.count}</Text>}
+            </View>
+          ))}
+        </View>
+      )}
+      {footer}
+    </Animated.View>
+  );
+
+  if (message.recalled) {
+    return withMeta(
+      <View style={[styles.bubble, styles.recalled]}>
+        <Text style={styles.recalledText}>{RECALLED_TEXT}</Text>
+        <Text style={[styles.time, styles.timeDark]}>{time}</Text>
+      </View>,
+    );
+  }
+
+  if (message.type === 'image' && message.imageUrl) {
+    const url = message.imageUrl;
+    return withMeta(
+      <ImageMessage
+        url={url}
+        width={message.width}
+        height={message.height}
+        mine={mine}
+        time={time}
+        onOpen={() => onOpenImage?.(url)}
+        onLongPress={onLongPress}
+      />,
+    );
+  }
 
   if (message.type === 'location' && message.lat !== undefined && message.lng !== undefined) {
     const { lat, lng } = message;
-    return (
-      <Animated.View style={[row, motion]}>
+    return withMeta(
         <PressableScale
           style={[styles.location, mine ? styles.tailMine : styles.tailOther]}
           onPress={() => Linking.openURL(getMapsUrl(lat, lng)).catch(() => {})}
+          onLongPress={onLongPress}
+          delayLongPress={LONG_PRESS_MS}
           scaleTo={0.97}
           accessibilityRole="link"
           accessibilityLabel="Mở vị trí trên Google Maps">
@@ -64,23 +146,74 @@ export default function MessageBubble({ message, mine, animateIn }: Props) {
             </View>
           </View>
           <Text style={[styles.time, styles.timeDark, styles.locationTime]}>{time}</Text>
-        </PressableScale>
-      </Animated.View>
+        </PressableScale>,
     );
   }
 
-  return (
-    <Animated.View style={[row, motion]}>
-      <View style={[styles.bubble, mine ? styles.mine : styles.other]}>
-        <Text style={[styles.text, mine && styles.textMine]}>{message.text}</Text>
-        <Text style={[styles.time, mine ? styles.timeMine : styles.timeDark]}>{time}</Text>
-      </View>
-    </Animated.View>
+  return withMeta(
+    <Pressable
+      style={[styles.bubble, mine ? styles.mine : styles.other]}
+      onLongPress={onLongPress}
+      delayLongPress={LONG_PRESS_MS}
+      accessibilityHint="Nhấn giữ để mở menu">
+      {message.replyTo && (
+        <Pressable
+          style={[styles.quote, mine ? styles.quoteMine : styles.quoteOther]}
+          onPress={onPressReply}
+          accessibilityRole="button"
+          accessibilityLabel={`Trích dẫn tin của ${replyName ?? 'thành viên'}, nhấn để xem tin gốc`}>
+          <Text style={[styles.quoteName, mine && styles.textMine]} numberOfLines={1}>
+            {replyName ?? 'Thành viên'}
+          </Text>
+          <Text style={[styles.quoteText, mine && styles.quoteTextMine]} numberOfLines={2}>
+            {replyPreview ?? message.replyTo.preview}
+          </Text>
+        </Pressable>
+      )}
+      <Text style={[styles.text, mine && styles.textMine]}>{message.text}</Text>
+      <Text style={[styles.time, mine ? styles.timeMine : styles.timeDark]}>{time}</Text>
+    </Pressable>,
   );
 }
 
 const styles = StyleSheet.create({
-  row: { paddingHorizontal: spacing.md, marginVertical: 3, flexDirection: 'row' },
+  wrap: { paddingHorizontal: spacing.md, paddingVertical: 3 },
+  highlight: { backgroundColor: 'rgba(199,123,18,0.18)' },
+  quote: {
+    borderLeftWidth: 3,
+    borderRadius: 8,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    marginBottom: 6,
+  },
+  quoteMine: { borderLeftColor: colors.onPrimary, backgroundColor: 'rgba(255,255,255,0.16)' },
+  quoteOther: { borderLeftColor: colors.primary, backgroundColor: colors.primarySoft },
+  quoteName: { fontSize: font.small, fontWeight: '800', color: colors.primary },
+  quoteText: { fontSize: font.small + 1, color: colors.textMuted },
+  quoteTextMine: { color: colors.onPrimaryMuted },
+  reactionRow: { flexDirection: 'row', width: '100%', gap: 4, marginTop: -6, paddingHorizontal: spacing.sm },
+  reactionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  reactionMine: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
+  reactionEmoji: { fontSize: 14 },
+  reactionCount: { fontSize: 12, fontWeight: '700', color: colors.text },
+  wrapRight: { alignItems: 'flex-end' },
+  wrapLeft: { alignItems: 'flex-start' },
+  rowInner: { flexDirection: 'row', width: '100%' },
+  sender: { fontSize: font.small, fontWeight: '700', color: colors.textMuted, marginLeft: spacing.sm, marginBottom: 2 },
+  systemRow: { alignItems: 'center', marginVertical: spacing.sm, paddingHorizontal: spacing.xl },
+  systemText: { fontSize: font.small, color: colors.textMuted, textAlign: 'center' },
+  recalled: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border },
+  recalledText: { fontSize: font.body, color: colors.textMuted, fontStyle: 'italic' },
   right: { justifyContent: 'flex-end' },
   left: { justifyContent: 'flex-start' },
   bubble: {

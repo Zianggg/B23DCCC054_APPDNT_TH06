@@ -30,7 +30,12 @@ describe('formatTime', () => {
   });
 
   test('last seen text', () => {
-    expect(formatLastSeen(new Date(2026, 9, 28, 8, 30).getTime(), now)).toBe('Hoạt động lúc 08:30');
+    const ago = (ms: number) => formatLastSeen(now - ms, now);
+    expect(ago(20 * 1000)).toBe('Vừa mới hoạt động');
+    expect(ago(5 * 60 * 1000)).toBe('Hoạt động 5 phút trước');
+    expect(ago(59 * 60 * 1000)).toBe('Hoạt động 59 phút trước');
+    expect(ago(90 * 60 * 1000)).toBe('Hoạt động 1 giờ trước');
+    expect(ago(3 * 24 * 3600 * 1000)).toBe('Hoạt động 3 ngày trước');
     expect(formatLastSeen(new Date(2026, 9, 2, 8, 30).getTime(), now)).toBe('Hoạt động ngày 02/10');
   });
 });

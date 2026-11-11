@@ -14,7 +14,7 @@ if linkage != nil
   use_frameworks! :linkage => linkage.to_sym
 end
 
-target 'B23DCCC054_APPDNT_TH05' do
+target 'B23DCCC054_APPDNT_TH06' do
   config = use_native_modules!
 
   use_react_native!(

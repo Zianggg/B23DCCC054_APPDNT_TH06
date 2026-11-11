@@ -5,7 +5,10 @@ export type AuthStackParamList = {
 
 export type AppStackParamList = {
   MainTabs: undefined;
-  Chat: { otherUid: string };
+  // otherUid chỉ cần khi mở chat 1-1 chưa có tin nào (cuộc trò chuyện chưa được tạo)
+  Chat: { convId: string; otherUid?: string };
+  CreateGroup: undefined;
+  GroupInfo: { convId: string };
 };
 
 export type MainTabParamList = {

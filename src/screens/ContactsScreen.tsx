@@ -11,6 +11,7 @@ import PressableScale from '../components/PressableScale';
 import { useAuth } from '../context/AuthContext';
 import { useChats } from '../context/ChatsContext';
 import { AppUser, filterContacts } from '../services/userService';
+import { directConvId } from '../services/chatService';
 import { AppStackParamList } from '../navigation/types';
 import { colors, font, spacing } from '../theme';
 
@@ -28,7 +29,8 @@ export default function ContactsScreen() {
     () => filterContacts(userList, user?.uid ?? '', '').filter(u => u.online),
     [userList, user?.uid],
   );
-  const openChat = (u: AppUser) => navigation.navigate('Chat', { otherUid: u.uid });
+  const openChat = (u: AppUser) =>
+    navigation.navigate('Chat', { convId: directConvId(user?.uid ?? '', u.uid), otherUid: u.uid });
 
   const onlineStrip =
     !query && online.length > 0 ? (

@@ -76,3 +76,6 @@ yarn-error.log
 
 # Ghi chú nội bộ khi phát triển
 .superpowers/
+
+# Firebase emulator
+*-debug.log

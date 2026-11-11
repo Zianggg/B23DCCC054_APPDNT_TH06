@@ -30,8 +30,11 @@ jest.mock('firebase/database', () => ({
   increment: jest.fn(),
   serverTimestamp: jest.fn(),
   query: jest.fn((r: unknown) => r),
-  orderByChild: jest.fn(),
+  orderByKey: jest.fn(),
+  startAt: jest.fn(),
+  runTransaction: jest.fn(() => Promise.resolve()),
   onChildAdded: jest.fn(() => jest.fn()),
+  onChildChanged: jest.fn(() => jest.fn()),
   onChildRemoved: jest.fn(),
   onValue: jest.fn((r: { path: string }, h: (s: unknown) => void) => {
     if (r.path === '.info/connected') {
@@ -47,7 +50,7 @@ jest.mock('firebase/database', () => ({
 
 import { onChildRemoved, update } from 'firebase/database';
 import { signOut } from 'firebase/auth';
-import { sendText, subscribeMessages } from '../src/services/chatService';
+import { sendText, subscribeLive } from '../src/services/chatService';
 import { logout, register, subscribeAuth } from '../src/services/authService';
 import { startPresence } from '../src/services/userService';
 import { requestLocationPermission } from '../src/services/locationService';
@@ -57,7 +60,8 @@ describe('offline send (Important 1)', () => {
     mockConnected = false;
     startPresence('me');
     (update as jest.Mock).mockClear();
-    await expect(sendText('me', 'b', 'hi')).rejects.toThrow('OFFLINE');
+    const target = { id: 'b_me', type: 'direct' as const, members: { me: true as const, b: true as const }, exists: false };
+    await expect(sendText('me', target, 'hi')).rejects.toThrow('OFFLINE');
     expect(update).not.toHaveBeenCalled();
     mockConnected = true;
     startPresence('me');
@@ -76,14 +80,14 @@ describe('offline logout (Important 1)', () => {
 });
 
 describe('rejected write (Important 2)', () => {
-  test('subscribeMessages reports removed ids and unsubscribes both listeners', () => {
+  test('subscribeLive reports removed ids and unsubscribes its listeners', () => {
     const unsubRemoved = jest.fn();
     (onChildRemoved as jest.Mock).mockImplementation((_q, h) => {
       h({ key: 'm1' });
       return unsubRemoved;
     });
     const onRemove = jest.fn();
-    const stop = subscribeMessages('a_b', jest.fn(), onRemove);
+    const stop = subscribeLive('a_b', null, { onUpsert: jest.fn(), onRemove });
     expect(onRemove).toHaveBeenCalledWith('m1');
     stop();
     expect(unsubRemoved).toHaveBeenCalled();

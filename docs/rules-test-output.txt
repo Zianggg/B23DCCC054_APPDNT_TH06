@@ -1,0 +1,25 @@
+﻿PS> firebase emulators:exec --only database --project demo-th06 "node scripts/test-rules.mjs"
+
+KIỂM THỬ LUẬT BẢO MẬT, Firebase Realtime Database Emulator
+PASS  PERMISSION_DENIED  [chi ] GET    /messages/g1  Người ngoài ĐỌC tin nhắn của nhóm
+PASS  PERMISSION_DENIED  [chi ] PUT    /messages/g1/x1  Người ngoài GỬI tin vào nhóm
+PASS  PERMISSION_DENIED  [binh] PUT    /messages/g1/x2  Thành viên gửi tin nhưng giả senderId của An
+PASS  ĐƯỢC PHÉP          [binh] PUT    /messages/g1/x3  Thành viên gửi tin hợp lệ
+PASS  PERMISSION_DENIED  [binh] PATCH  /messages/g1/m1  Bình THU HỒI tin của An
+PASS  ĐƯỢC PHÉP          [an  ] PATCH  /messages/g1/m1  An thu hồi tin của chính mình
+PASS  PERMISSION_DENIED  [binh] PUT    /typing/g1/an  Bình ghi trạng thái ĐANG GÕ thay cho An
+PASS  ĐƯỢC PHÉP          [binh] PUT    /typing/g1/binh  Bình ghi trạng thái đang gõ của chính mình
+PASS  PERMISSION_DENIED  [binh] PUT    /messages/g1/m2/reactions/an  Bình thả CẢM XÚC dưới tên An
+PASS  ĐƯỢC PHÉP          [binh] PUT    /messages/g1/m2/reactions/binh  Bình thả cảm xúc của chính mình
+PASS  PERMISSION_DENIED  [binh] PUT    /messages/g1/m2/reactions/binh  Bình thả cảm xúc không có trong danh sách
+PASS  PERMISSION_DENIED  [binh] PUT    /conversations/g1/name  Thành viên thường ĐỔI TÊN nhóm
+PASS  ĐƯỢC PHÉP          [an  ] PUT    /conversations/g1/name  Trưởng nhóm đổi tên nhóm
+PASS  PERMISSION_DENIED  [binh] DELETE /conversations/g1/members/an  Thành viên thường XÓA trưởng nhóm khỏi nhóm
+PASS  PERMISSION_DENIED  [chi ] PUT    /conversations/g1/members/chi  Người ngoài TỰ THÊM mình vào nhóm
+PASS  PERMISSION_DENIED  [chi ] PUT    /userChats/an/g1/lastMessage  Người ngoài sửa dòng tin cuối ở Home của An
+PASS  PERMISSION_DENIED  [binh] GET    /notifications/an  Bình đọc THÔNG BÁO của An
+PASS  PERMISSION_DENIED  [binh] PUT    /notifications/an/n1  Bình tạo thông báo giả mạo fromUid = An
+PASS  ĐƯỢC PHÉP          [binh] PUT    /notifications/an/n2  Bình tạo thông báo hợp lệ cho An
+PASS  ĐƯỢC PHÉP          [binh] DELETE /conversations/g1/members/binh  Thành viên tự rời nhóm
+20/20 trường hợp đúng như mong đợi.
++  Script exited successfully (code 0)

@@ -24,7 +24,8 @@ const tabIcon =
     <Icon name={name} color={color} size={size} />;
 
 export default function MainTabs() {
-  const { unread } = useChats();
+  const { unread, unreadNotifications } = useChats();
+  const badge = (n: number) => (n > 0 ? (n > 99 ? '99+' : n) : undefined);
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -39,7 +40,7 @@ export default function MainTabs() {
         component={HomeScreen}
         options={{
           title: 'Tin nhắn',
-          tabBarBadge: unread > 0 ? (unread > 99 ? '99+' : unread) : undefined,
+          tabBarBadge: badge(unread),
           tabBarBadgeStyle: { backgroundColor: colors.badge },
         }}
       />
@@ -47,7 +48,11 @@ export default function MainTabs() {
       <Tab.Screen
         name="Notifications"
         component={NotificationsScreen}
-        options={{ title: 'Thông báo' }}
+        options={{
+          title: 'Thông báo',
+          tabBarBadge: badge(unreadNotifications),
+          tabBarBadgeStyle: { backgroundColor: colors.badge },
+        }}
       />
       <Tab.Screen name="Settings" component={SettingsScreen} options={{ title: 'Cài đặt' }} />
     </Tab.Navigator>

@@ -4,33 +4,34 @@ import Avatar from './Avatar';
 import AnimatedBadge from './AnimatedBadge';
 import PressableScale from './PressableScale';
 import { UserChat } from '../services/chatService';
-import { AppUser } from '../services/userService';
+import { ChatDisplay } from '../utils/chatDisplay';
 import { formatListTime } from '../utils/formatTime';
 import { colors, font, radius, spacing } from '../theme';
 
-type Props = { chat: UserChat; user?: AppUser; onPress: () => void };
+type Props = { chat: UserChat; display: ChatDisplay; preview: string; onPress: () => void };
 
-export default function ConversationItem({ chat, user, onPress }: Props) {
+export default function ConversationItem({ chat, display, preview, onPress }: Props) {
   const unread = chat.unread > 0;
   return (
     <PressableScale style={[styles.row, unread && styles.rowUnread]} onPress={onPress} scaleTo={0.98}>
       <Avatar
-        uid={chat.otherUid}
-        name={user?.name ?? ''}
+        uid={display.avatarUid}
+        name={display.title}
         size={56}
-        online={!!user?.online}
+        online={display.isGroup ? undefined : display.online}
         ringColor={unread ? colors.primarySoft : colors.surface}
       />
       <View style={styles.info}>
         <View style={styles.top}>
           <Text style={[styles.name, unread && styles.nameUnread]} numberOfLines={1}>
-            {user?.name || 'Người dùng'}
+            {display.isGroup ? '👥 ' : ''}
+            {display.title}
           </Text>
-          <Text style={[styles.time, unread && styles.timeUnread]}>{formatListTime(chat.lastTime)}</Text>
+          <Text style={[styles.time, unread && styles.timeUnread]}>{formatListTime(chat.updatedAt)}</Text>
         </View>
         <View style={styles.bottom}>
           <Text style={[styles.last, unread && styles.lastUnread]} numberOfLines={1}>
-            {chat.lastMessage}
+            {preview}
           </Text>
           <AnimatedBadge count={chat.unread} />
         </View>
